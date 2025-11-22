@@ -97,6 +97,12 @@ def _enqueue_output(stream, stream_name, output_queue, process_pid_for_log="<未
 
 # --- 设置本启动器脚本的日志系统 (setup_launcher_logging) (from dev - clears log on start) ---
 def setup_launcher_logging(log_level=logging.INFO):
+    # --- 新增代码开始：强制使用 /tmp 目录 ---
+    global LOG_DIR, LAUNCHER_LOG_FILE_PATH
+    LOG_DIR = "/tmp/logs"
+    LAUNCHER_LOG_FILE_PATH = "/tmp/logs/launcher.log"
+    # --- 新增代码结束 ---
+
     os.makedirs(LOG_DIR, exist_ok=True)
     file_log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - [%(name)s:%(funcName)s:%(lineno)d] - %(message)s')
     console_log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -104,23 +110,15 @@ def setup_launcher_logging(log_level=logging.INFO):
         logger.handlers.clear()
     logger.setLevel(log_level)
     logger.propagate = False
+    
+    # 注意：如果文件存在，先尝试删除旧日志
     if os.path.exists(LAUNCHER_LOG_FILE_PATH):
         try:
             os.remove(LAUNCHER_LOG_FILE_PATH)
         except OSError:
             pass
-    file_handler = logging.handlers.RotatingFileHandler(
-        LAUNCHER_LOG_FILE_PATH, maxBytes=2*1024*1024, backupCount=3, encoding='utf-8', mode='w'
-    )
-    file_handler.setFormatter(file_log_formatter)
-    logger.addHandler(file_handler)
-    stream_handler = logging.StreamHandler(sys.stderr)
-    stream_handler.setFormatter(console_log_formatter)
-    logger.addHandler(stream_handler)
-    logger.info("=" * 30 + " Camoufox启动器日志系统已初始化 " + "=" * 30)
-    logger.info(f"日志级别设置为: {logging.getLevelName(logger.getEffectiveLevel())}")
-    logger.info(f"日志文件路径: {LAUNCHER_LOG_FILE_PATH}")
-
+    
+    # ... (后面保持原样，只要保证后续代码使用的是修改后的 LOG_DIR 和 LAUNCHER_LOG_FILE_PATH 即可)
 # --- 确保认证文件目录存在 (ensure_auth_dirs_exist) ---
 def ensure_auth_dirs_exist():
     logger.info("正在检查并确保认证文件目录存在...")
