@@ -19,6 +19,38 @@ import socket
 import platform
 import shutil
 
+from pathlib import Path
+
+# 1. 强制将 Browserforge 的数据路径重定向到 /tmp
+try:
+    import browserforge.headers.generator
+    import browserforge.fingerprints.generator
+    
+    # 定义新的可写数据路径
+    tmp_bf_path = Path("/tmp/browserforge_data")
+    
+    # 劫持 browserforge 的内部数据路径
+    # 注意：这取决于 browserforge 的具体版本，以下是一种通用的尝试
+    if hasattr(browserforge.headers.generator, 'DATA_DIR'):
+        browserforge.headers.generator.DATA_DIR = tmp_bf_path / "headers"
+    if hasattr(browserforge.fingerprints.generator, 'DATA_DIR'):
+        browserforge.fingerprints.generator.DATA_DIR = tmp_bf_path / "fingerprints"
+
+    # 确保目录存在
+    os.makedirs(tmp_bf_path / "headers", exist_ok=True)
+    os.makedirs(tmp_bf_path / "fingerprints", exist_ok=True)
+    
+    print("[INFO] Leapcell Patch: Browserforge path redirected to /tmp")
+except ImportError:
+    pass
+
+# 2. 解决 Auth 目录只读问题 (如果代码试图写入 auth 目录)
+# 如果代码里写死了 auth_profiles 路径，尝试创建软链接或在代码里修改
+# 这里仅做目录创建防止报错
+os.makedirs("/tmp/auth_profiles/active", exist_ok=True)
+# ==========================================
+# Leapcell 部署专用补丁 (Patch End)
+# ==========================================
 # --- 新的导入 ---
 from dotenv import load_dotenv
 
