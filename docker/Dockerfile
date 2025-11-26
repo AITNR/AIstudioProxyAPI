@@ -91,11 +91,6 @@ RUN mkdir -p /var/cache/camoufox && \
 RUN python update_browserforge_data.py
 # ... 其他 Dockerfile 指令 ...
 
-# 找到 browserforge 的安装位置，并将其数据目录复制到 /tmp
-# 注意：你的 python 版本和路径可能不同，需要根据实际情况调整
-# 你可以在构建失败的镜像里用 `docker run -it <image> bash` 进去找找看
-RUN cp -r /usr/local/lib/python3.10/site-packages/browserforge/data /tmp/browserforge_data
-
 # 清理代理环境变量
 ENV HTTP_PROXY=""
 ENV HTTPS_PROXY=""
