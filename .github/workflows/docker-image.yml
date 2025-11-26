@@ -58,6 +58,7 @@ jobs:
         with:
           context: .
           # 启用推送，构建成功后镜像会被发布
+          file: ./docker/Dockerfile  
           push: true
           # 使用元数据 action 生成的标签
           tags: ${{ steps.meta.outputs.tags }}
