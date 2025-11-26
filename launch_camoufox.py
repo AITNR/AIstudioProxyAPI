@@ -19,38 +19,6 @@ import socket
 import platform
 import shutil
 
-from pathlib import Path
-
-# 1. 强制将 Browserforge 的数据路径重定向到 /tmp
-try:
-    import browserforge.headers.generator
-    import browserforge.fingerprints.generator
-    
-    # 定义新的可写数据路径
-    tmp_bf_path = Path("/tmp/browserforge_data")
-    
-    # 劫持 browserforge 的内部数据路径
-    # 注意：这取决于 browserforge 的具体版本，以下是一种通用的尝试
-    if hasattr(browserforge.headers.generator, 'DATA_DIR'):
-        browserforge.headers.generator.DATA_DIR = tmp_bf_path / "headers"
-    if hasattr(browserforge.fingerprints.generator, 'DATA_DIR'):
-        browserforge.fingerprints.generator.DATA_DIR = tmp_bf_path / "fingerprints"
-
-    # 确保目录存在
-    os.makedirs(tmp_bf_path / "headers", exist_ok=True)
-    os.makedirs(tmp_bf_path / "fingerprints", exist_ok=True)
-    
-    print("[INFO] Leapcell Patch: Browserforge path redirected to /tmp")
-except ImportError:
-    pass
-
-# 2. 解决 Auth 目录只读问题 (如果代码试图写入 auth 目录)
-# 如果代码里写死了 auth_profiles 路径，尝试创建软链接或在代码里修改
-# 这里仅做目录创建防止报错
-os.makedirs("/tmp/auth_profiles/active", exist_ok=True)
-# ==========================================
-# Leapcell 部署专用补丁 (Patch End)
-# ==========================================
 # --- 新的导入 ---
 from dotenv import load_dotenv
 
@@ -129,12 +97,6 @@ def _enqueue_output(stream, stream_name, output_queue, process_pid_for_log="<未
 
 # --- 设置本启动器脚本的日志系统 (setup_launcher_logging) (from dev - clears log on start) ---
 def setup_launcher_logging(log_level=logging.INFO):
-    # --- 新增代码开始：强制使用 /tmp 目录 ---
-    global LOG_DIR, LAUNCHER_LOG_FILE_PATH
-    LOG_DIR = "/tmp/logs"
-    LAUNCHER_LOG_FILE_PATH = "/tmp/logs/launcher.log"
-    # --- 新增代码结束 ---
-
     os.makedirs(LOG_DIR, exist_ok=True)
     file_log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - [%(name)s:%(funcName)s:%(lineno)d] - %(message)s')
     console_log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -142,15 +104,23 @@ def setup_launcher_logging(log_level=logging.INFO):
         logger.handlers.clear()
     logger.setLevel(log_level)
     logger.propagate = False
-    
-    # 注意：如果文件存在，先尝试删除旧日志
     if os.path.exists(LAUNCHER_LOG_FILE_PATH):
         try:
             os.remove(LAUNCHER_LOG_FILE_PATH)
         except OSError:
             pass
-    
-    # ... (后面保持原样，只要保证后续代码使用的是修改后的 LOG_DIR 和 LAUNCHER_LOG_FILE_PATH 即可)
+    file_handler = logging.handlers.RotatingFileHandler(
+        LAUNCHER_LOG_FILE_PATH, maxBytes=2*1024*1024, backupCount=3, encoding='utf-8', mode='w'
+    )
+    file_handler.setFormatter(file_log_formatter)
+    logger.addHandler(file_handler)
+    stream_handler = logging.StreamHandler(sys.stderr)
+    stream_handler.setFormatter(console_log_formatter)
+    logger.addHandler(stream_handler)
+    logger.info("=" * 30 + " Camoufox启动器日志系统已初始化 " + "=" * 30)
+    logger.info(f"日志级别设置为: {logging.getLevelName(logger.getEffectiveLevel())}")
+    logger.info(f"日志文件路径: {LAUNCHER_LOG_FILE_PATH}")
+
 # --- 确保认证文件目录存在 (ensure_auth_dirs_exist) ---
 def ensure_auth_dirs_exist():
     logger.info("正在检查并确保认证文件目录存在...")
